@@ -1,0 +1,21 @@
+build:
+  maxIssues: 0
+
+style:
+  MagicNumber:
+    active: false  # Compose layouts use numeric constants frequently
+  FunctionNaming:
+    active: false  # Composable functions are PascalCase by convention
+
+naming:
+  FunctionNaming:
+    active: false  # Composable functions are PascalCase by convention
+
+complexity:
+  LongParameterList:
+    active: true
+    functionThreshold: 8  # Composables legitimately have many parameters
+    constructorThreshold: 8
+  LongMethod:
+    active: true
+    threshold: 100  # Composable functions tend to be longer than regular functions
