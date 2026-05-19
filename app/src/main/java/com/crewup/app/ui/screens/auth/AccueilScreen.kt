@@ -1,9 +1,12 @@
 package com.crewup.app.ui.screens.auth
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.*
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -18,36 +21,31 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.crewup.app.R
 import com.crewup.app.ui.navigation.Screen
-import androidx.compose.foundation.background
-import androidx.compose.ui.text.style.TextAlign
+import com.crewup.app.ui.theme.CrewUpBlueEnd
+import com.crewup.app.ui.theme.CrewUpBlueStart
+import com.crewup.app.ui.theme.CrewUpOrangeEnd
 
-// Dégradé bouton principal (bleu → orange)
-val buttonGradient = Brush.horizontalGradient(
-    colors = listOf(Color(0xFF1565C0), Color(0xFF42A5F5), Color(0xFFFF8C00))
-)
-
-// Dégradé bouton secondaire (orange → bleu)
-val buttonGradient2 = Brush.horizontalGradient(
-    colors = listOf(Color(0xFFFF8C00), Color(0xFF42A5F5), Color(0xFF1565C0))
+// Gradient orange-bleu (bouton Créer un compte)
+private val gradientOrange = Brush.horizontalGradient(
+    colors = listOf(CrewUpOrangeEnd, CrewUpBlueEnd, CrewUpBlueStart)
 )
 
 @Composable
 fun AccueilScreen(navController: NavHostController) {
     Box(modifier = Modifier.fillMaxSize()) {
 
-        // Image de fond
         Image(
-            painter            = painterResource(id = R.drawable.bg_welcome),
+            painter            = painterResource(id = R.drawable.bg_accueil),
             contentDescription = null,
             contentScale       = ContentScale.Crop,
             modifier           = Modifier.fillMaxSize()
         )
 
-        // Overlay sombre en bas pour lisibilité
+        // Dégradé sombre en bas pour lisibilité des boutons
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .fillMaxHeight(0.5f)
+                .fillMaxHeight(0.55f)
                 .align(Alignment.BottomCenter)
                 .background(
                     Brush.verticalGradient(
@@ -60,21 +58,32 @@ fun AccueilScreen(navController: NavHostController) {
             modifier            = Modifier.fillMaxSize(),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Spacer(modifier = Modifier.height(60.dp))
+            Spacer(modifier = Modifier.height(56.dp))
 
-            // Logo + titre
-            Image(
-                painter            = painterResource(id = R.drawable.logo),
-                contentDescription = "Logo CrewUp",
-                modifier           = Modifier.size(140.dp)
-            )
-
+            // Titre
             Text(
                 text       = "CrewUp",
                 fontSize   = 36.sp,
                 fontWeight = FontWeight.Black,
                 color      = Color.White
             )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Logo sur fond blanc circulaire
+            Box(
+                modifier         = Modifier
+                    .size(140.dp)
+                    .clip(CircleShape)
+                    .background(Color.White),
+                contentAlignment = Alignment.Center
+            ) {
+                Image(
+                    painter            = painterResource(id = R.drawable.logo),
+                    contentDescription = "Logo CrewUp",
+                    modifier           = Modifier.size(120.dp)
+                )
+            }
 
             Spacer(modifier = Modifier.weight(1f))
 
@@ -85,13 +94,13 @@ fun AccueilScreen(navController: NavHostController) {
                     .padding(horizontal = 32.dp, vertical = 48.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // Bouton Se connecter
+                // Se connecter — fond blanc, texte bleu
                 Box(
-                    modifier = Modifier
+                    modifier         = Modifier
                         .fillMaxWidth()
                         .height(56.dp)
                         .clip(RoundedCornerShape(16.dp))
-                        .background(buttonGradient),
+                        .background(Color.White),
                     contentAlignment = Alignment.Center
                 ) {
                     TextButton(
@@ -102,18 +111,18 @@ fun AccueilScreen(navController: NavHostController) {
                             text       = "Se connecter",
                             fontSize   = 17.sp,
                             fontWeight = FontWeight.Bold,
-                            color      = Color.White
+                            color      = CrewUpBlueStart
                         )
                     }
                 }
 
-                // Bouton Créer un compte
+                // Créer un compte — gradient orange → bleu (couleurs thème)
                 Box(
-                    modifier = Modifier
+                    modifier         = Modifier
                         .fillMaxWidth()
                         .height(56.dp)
                         .clip(RoundedCornerShape(16.dp))
-                        .background(buttonGradient2),
+                        .background(gradientOrange),
                     contentAlignment = Alignment.Center
                 ) {
                     TextButton(
