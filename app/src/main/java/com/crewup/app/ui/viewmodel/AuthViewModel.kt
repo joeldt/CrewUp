@@ -3,6 +3,7 @@ package com.crewup.app.ui.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.crewup.app.data.repository.AuthRepository
+import com.google.firebase.FirebaseNetworkException
 import com.google.firebase.auth.FirebaseAuthInvalidCredentialsException
 import com.google.firebase.auth.FirebaseAuthInvalidUserException
 import com.google.firebase.auth.FirebaseAuthUserCollisionException
@@ -28,10 +29,11 @@ class AuthViewModel : ViewModel() {
     fun isAlreadyLoggedIn() = repository.getCurrentUser() != null
 
     fun resetState() { _uiState.value = AuthUiState.Idle }
+    fun setError(message: String) { _uiState.value = AuthUiState.Error(message) }
 
     fun loginWithEmail(email: String, password: String) {
         if (email.isBlank() || password.isBlank()) {
-            _uiState.value = AuthUiState.Error("Remplis tous les champs")
+            _uiState.value = AuthUiState.Error("Veuillez remplir tous les champs")
             return
         }
         viewModelScope.launch {
@@ -45,7 +47,7 @@ class AuthViewModel : ViewModel() {
     fun registerWithEmail(email: String, password: String, confirmPassword: String, nom: String) {
         when {
             email.isBlank() || password.isBlank() || nom.isBlank() ->
-                _uiState.value = AuthUiState.Error("Remplis tous les champs")
+                _uiState.value = AuthUiState.Error("Veuillez remplir tous les champs")
             password != confirmPassword ->
                 _uiState.value = AuthUiState.Error("Les mots de passe ne correspondent pas")
             password.length < 6 ->
@@ -64,13 +66,13 @@ class AuthViewModel : ViewModel() {
             _uiState.value = AuthUiState.Loading
             repository.loginWithGoogle(idToken)
                 .onSuccess { _uiState.value = AuthUiState.Success }
-                .onFailure { _uiState.value = AuthUiState.Error("Connexion Google échouée") }
+                .onFailure { _uiState.value = AuthUiState.Error(firebaseErrorMessage(it)) }
         }
     }
 
     fun sendPasswordReset(email: String) {
         if (email.isBlank()) {
-            _uiState.value = AuthUiState.Error("Saisis ton adresse email")
+            _uiState.value = AuthUiState.Error("Veuillez saisir votre adresse email")
             return
         }
         viewModelScope.launch {
@@ -90,15 +92,16 @@ class AuthViewModel : ViewModel() {
             _uiState.value = AuthUiState.Loading
             repository.saveUserProfile(pseudo, ville, activites)
                 .onSuccess { _uiState.value = AuthUiState.Success }
-                .onFailure { _uiState.value = AuthUiState.Error("Erreur lors de la sauvegarde") }
+                .onFailure { _uiState.value = AuthUiState.Error(firebaseErrorMessage(it)) }
         }
     }
 
     private fun firebaseErrorMessage(e: Throwable): String = when (e) {
+        is FirebaseNetworkException                -> "Pas de connexion internet. Vérifiez votre réseau."
         is FirebaseAuthInvalidCredentialsException -> "Email ou mot de passe incorrect"
-        is FirebaseAuthInvalidUserException        -> "Aucun compte trouvé avec cet email"
+        is FirebaseAuthInvalidUserException        -> "Aucun compte associé à cet email"
         is FirebaseAuthUserCollisionException      -> "Un compte existe déjà avec cet email"
-        is FirebaseAuthWeakPasswordException       -> "Mot de passe trop faible (6 caractères min.)"
-        else                                       -> e.message ?: "Une erreur est survenue"
+        is FirebaseAuthWeakPasswordException       -> "Le mot de passe doit contenir au moins 6 caractères"
+        else                                       -> "Une erreur est survenue. Veuillez réessayer."
     }
 }

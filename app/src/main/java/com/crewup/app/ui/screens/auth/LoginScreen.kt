@@ -28,7 +28,9 @@ import androidx.compose.ui.unit.sp
 import androidx.credentials.CredentialManager
 import androidx.credentials.CustomCredential
 import androidx.credentials.GetCredentialRequest
+import androidx.credentials.exceptions.GetCredentialCancellationException
 import androidx.credentials.exceptions.GetCredentialException
+import androidx.credentials.exceptions.NoCredentialException
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
@@ -37,7 +39,7 @@ import com.crewup.app.ui.navigation.Screen
 import com.crewup.app.ui.theme.*
 import com.crewup.app.ui.viewmodel.AuthUiState
 import com.crewup.app.ui.viewmodel.AuthViewModel
-import com.google.android.libraries.identity.googleid.GetGoogleIdOption
+import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import kotlinx.coroutines.launch
 
@@ -73,12 +75,11 @@ fun LoginScreen(
         scope.launch {
             try {
                 val credentialManager = CredentialManager.create(context)
-                val googleIdOption = GetGoogleIdOption.Builder()
-                    .setFilterByAuthorizedAccounts(false)
-                    .setServerClientId(context.getString(R.string.default_web_client_id))
+                val signInWithGoogleOption = GetSignInWithGoogleOption
+                    .Builder(context.getString(R.string.default_web_client_id))
                     .build()
                 val request = GetCredentialRequest.Builder()
-                    .addCredentialOption(googleIdOption)
+                    .addCredentialOption(signInWithGoogleOption)
                     .build()
                 val result = credentialManager.getCredential(context, request)
                 val credential = result.credential
@@ -87,9 +88,15 @@ fun LoginScreen(
                 ) {
                     val idToken = GoogleIdTokenCredential.createFrom(credential.data).idToken
                     viewModel.loginWithGoogle(idToken)
+                } else {
+                    viewModel.setError("La connexion avec Google a échoué. Veuillez réessayer.")
                 }
+            } catch (_: GetCredentialCancellationException) {
+                // L'utilisateur a annulé — ne rien afficher
+            } catch (_: NoCredentialException) {
+                viewModel.setError("Aucun compte Google trouvé sur cet appareil")
             } catch (_: GetCredentialException) {
-                // Annulé par l'utilisateur ou non disponible
+                viewModel.setError("La connexion avec Google a échoué. Veuillez réessayer.")
             }
         }
     }
