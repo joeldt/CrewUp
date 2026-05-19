@@ -16,6 +16,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -23,20 +25,74 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.credentials.CredentialManager
+import androidx.credentials.CustomCredential
+import androidx.credentials.GetCredentialRequest
+import androidx.credentials.exceptions.GetCredentialException
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import com.crewup.app.R
 import com.crewup.app.ui.navigation.Screen
 import com.crewup.app.ui.theme.*
+import com.crewup.app.ui.viewmodel.AuthUiState
+import com.crewup.app.ui.viewmodel.AuthViewModel
+import com.google.android.libraries.identity.googleid.GetGoogleIdOption
+import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
+import kotlinx.coroutines.launch
 
-// Gradient bleu → orange (couleurs thème, bouton principal)
 private val gradientBleu = Brush.horizontalGradient(
     colors = listOf(CrewUpBlueStart, CrewUpBlueEnd, CrewUpOrangeEnd)
 )
 
 @Composable
-fun LoginScreen(navController: NavHostController) {
+fun LoginScreen(
+    navController: NavHostController,
+    viewModel: AuthViewModel = viewModel()
+) {
     var email    by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+    val scope   = rememberCoroutineScope()
+
+    val isLoading = uiState is AuthUiState.Loading
+    val errorMsg  = (uiState as? AuthUiState.Error)?.message
+
+    LaunchedEffect(uiState) {
+        if (uiState is AuthUiState.Success) {
+            navController.navigate(Screen.Home.route) {
+                popUpTo(0) { inclusive = true }
+            }
+            viewModel.resetState()
+        }
+    }
+
+    fun signInWithGoogle() {
+        scope.launch {
+            try {
+                val credentialManager = CredentialManager.create(context)
+                val googleIdOption = GetGoogleIdOption.Builder()
+                    .setFilterByAuthorizedAccounts(false)
+                    .setServerClientId(context.getString(R.string.default_web_client_id))
+                    .build()
+                val request = GetCredentialRequest.Builder()
+                    .addCredentialOption(googleIdOption)
+                    .build()
+                val result = credentialManager.getCredential(context, request)
+                val credential = result.credential
+                if (credential is CustomCredential &&
+                    credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
+                ) {
+                    val idToken = GoogleIdTokenCredential.createFrom(credential.data).idToken
+                    viewModel.loginWithGoogle(idToken)
+                }
+            } catch (_: GetCredentialException) {
+                // Annulé par l'utilisateur ou non disponible
+            }
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -46,7 +102,6 @@ fun LoginScreen(navController: NavHostController) {
     ) {
         Spacer(modifier = Modifier.height(48.dp))
 
-        // Bouton retour
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = { navController.popBackStack() }) {
                 Icon(
@@ -59,7 +114,6 @@ fun LoginScreen(navController: NavHostController) {
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Titre
         Text(
             text       = "Se connecter",
             fontSize   = 26.sp,
@@ -71,7 +125,6 @@ fun LoginScreen(navController: NavHostController) {
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Logo circulaire — même dossier res/drawable/ que bg_accueil
         Box(
             modifier         = Modifier
                 .size(100.dp)
@@ -99,71 +152,85 @@ fun LoginScreen(navController: NavHostController) {
 
         Spacer(modifier = Modifier.height(32.dp))
 
-        // Champ email / pseudo
         OutlinedTextField(
-            value         = email,
-            onValueChange = { email = it },
-            placeholder   = { Text("Pseudo ou adresse email...") },
-            modifier      = Modifier.fillMaxWidth(),
-            shape         = RoundedCornerShape(12.dp),
+            value           = email,
+            onValueChange   = { email = it; if (errorMsg != null) viewModel.resetState() },
+            placeholder     = { Text("Adresse email...") },
+            modifier        = Modifier.fillMaxWidth(),
+            shape           = RoundedCornerShape(12.dp),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
-            singleLine    = true
+            singleLine      = true,
+            enabled         = !isLoading
         )
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Champ mot de passe
         OutlinedTextField(
-            value                  = password,
-            onValueChange          = { password = it },
-            placeholder            = { Text("Mot de passe ...") },
-            modifier               = Modifier.fillMaxWidth(),
-            shape                  = RoundedCornerShape(12.dp),
-            visualTransformation   = PasswordVisualTransformation(),
-            keyboardOptions        = KeyboardOptions(keyboardType = KeyboardType.Password),
-            singleLine             = true
+            value                = password,
+            onValueChange        = { password = it; if (errorMsg != null) viewModel.resetState() },
+            placeholder          = { Text("Mot de passe...") },
+            modifier             = Modifier.fillMaxWidth(),
+            shape                = RoundedCornerShape(12.dp),
+            visualTransformation = PasswordVisualTransformation(),
+            keyboardOptions      = KeyboardOptions(keyboardType = KeyboardType.Password),
+            singleLine           = true,
+            enabled              = !isLoading
         )
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // Mot de passe oublié
         TextButton(
-            onClick  = {},
-            modifier = Modifier.align(Alignment.End)
+            onClick  = { navController.navigate(Screen.ForgotPassword.route) },
+            modifier = Modifier.align(Alignment.End),
+            enabled  = !isLoading
         ) {
             Text(text = "Mot de passe oublié ?", color = CrewUpGrayMid, fontSize = 13.sp)
         }
 
+        if (errorMsg != null) {
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text      = errorMsg,
+                color     = MaterialTheme.colorScheme.error,
+                fontSize  = 13.sp,
+                modifier  = Modifier.fillMaxWidth(),
+                textAlign = TextAlign.Center
+            )
+        }
+
         Spacer(modifier = Modifier.weight(1f))
 
-        // Bouton Se connecter — gradient bleu → orange (couleurs thème)
         Box(
             modifier         = Modifier
                 .fillMaxWidth()
                 .height(56.dp)
                 .clip(RoundedCornerShape(16.dp))
-                .background(gradientBleu),
+                .background(if (isLoading) SolidColor(CrewUpGrayMid) else gradientBleu),
             contentAlignment = Alignment.Center
         ) {
-            TextButton(
-                onClick  = { navController.navigate(Screen.Home.route) },
-                modifier = Modifier.fillMaxSize()
-            ) {
-                Text(
-                    text       = "Se connecter",
-                    fontSize   = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    color      = Color.White
-                )
+            if (isLoading) {
+                CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
+            } else {
+                TextButton(
+                    onClick  = { viewModel.loginWithEmail(email, password) },
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    Text(
+                        text       = "Se connecter",
+                        fontSize   = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        color      = Color.White
+                    )
+                }
             }
         }
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Lien inscription
         TextButton(
             onClick  = { navController.navigate(Screen.Register.route) },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            enabled  = !isLoading
         ) {
             Text(
                 text      = "Pas de compte ? Inscription",
@@ -172,7 +239,6 @@ fun LoginScreen(navController: NavHostController) {
             )
         }
 
-        // Séparateur
         Text(
             text      = "ou continuer avec",
             color     = CrewUpGrayMid,
@@ -183,15 +249,13 @@ fun LoginScreen(navController: NavHostController) {
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Icônes SSO
         Row(
-            modifier            = Modifier.fillMaxWidth(),
+            modifier              = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.Center,
-            verticalAlignment   = Alignment.CenterVertically
+            verticalAlignment     = Alignment.CenterVertically
         ) {
-            // Google
             IconButton(
-                onClick  = {},
+                onClick  = { if (!isLoading) signInWithGoogle() },
                 modifier = Modifier
                     .size(52.dp)
                     .clip(RoundedCornerShape(12.dp))
@@ -206,7 +270,6 @@ fun LoginScreen(navController: NavHostController) {
 
             Spacer(modifier = Modifier.width(16.dp))
 
-            // Apple
             IconButton(
                 onClick  = {},
                 modifier = Modifier
@@ -223,7 +286,6 @@ fun LoginScreen(navController: NavHostController) {
 
             Spacer(modifier = Modifier.width(16.dp))
 
-            // Mail
             IconButton(
                 onClick  = {},
                 modifier = Modifier
