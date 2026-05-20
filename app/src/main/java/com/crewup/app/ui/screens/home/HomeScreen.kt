@@ -17,10 +17,14 @@ import androidx.navigation.NavHostController
 import com.crewup.app.ui.components.BottomNavBar
 import com.crewup.app.ui.navigation.Screen
 import com.crewup.app.ui.theme.*
+import com.google.firebase.auth.FirebaseAuth
 
 @Composable
 fun HomeScreen(navController: NavHostController) {
     var selectedTab by remember { mutableIntStateOf(0) }
+    val prenom = remember {
+        FirebaseAuth.getInstance().currentUser?.displayName?.ifBlank { null } ?: "toi"
+    }
 
     Scaffold(
         bottomBar    = { BottomNavBar(navController) },
@@ -40,7 +44,7 @@ fun HomeScreen(navController: NavHostController) {
 
             // Salutation
             Text(
-                text       = "Salut Alex !",
+                text       = "Salut $prenom !",
                 fontSize   = 22.sp,
                 fontWeight = FontWeight.Black,
                 color      = CrewUpBlack,
