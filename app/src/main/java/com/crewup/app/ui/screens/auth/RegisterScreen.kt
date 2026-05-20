@@ -31,6 +31,7 @@ fun RegisterScreen(
     navController: NavHostController,
     viewModel: AuthViewModel = viewModel()
 ) {
+    var prenom   by remember { mutableStateOf("") }
     var nom      by remember { mutableStateOf("") }
     var email    by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
@@ -90,9 +91,20 @@ fun RegisterScreen(
         Spacer(modifier = Modifier.height(32.dp))
 
         OutlinedTextField(
+            value         = prenom,
+            onValueChange = { prenom = it; if (errorMsg != null) viewModel.resetState() },
+            placeholder   = { Text("Prénom...") },
+            modifier      = Modifier.fillMaxWidth(),
+            shape         = RoundedCornerShape(12.dp),
+            singleLine    = true,
+            enabled       = !isLoading
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+
+        OutlinedTextField(
             value         = nom,
             onValueChange = { nom = it; if (errorMsg != null) viewModel.resetState() },
-            placeholder   = { Text("Nom & prénom..") },
+            placeholder   = { Text("Nom...") },
             modifier      = Modifier.fillMaxWidth(),
             shape         = RoundedCornerShape(12.dp),
             singleLine    = true,
@@ -169,7 +181,7 @@ fun RegisterScreen(
         Spacer(modifier = Modifier.weight(1f))
 
         Button(
-            onClick  = { viewModel.registerWithEmail(email, password, confirm, nom) },
+            onClick  = { viewModel.registerWithEmail(email, password, confirm, nom, prenom) },
             enabled  = cguCheck && !isLoading,
             modifier = Modifier
                 .fillMaxWidth()
