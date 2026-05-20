@@ -58,10 +58,16 @@ class AuthViewModel : ViewModel() {
         when {
             prenom.isBlank() || nom.isBlank() || email.isBlank() || password.isBlank() ->
                 _uiState.value = AuthUiState.Error("Veuillez remplir tous les champs")
-            password != confirmPassword ->
-                _uiState.value = AuthUiState.Error("Les mots de passe ne correspondent pas")
+            !email.matches(Regex("^[^@]+@[^@]+\\.[^@]+$")) ->
+                _uiState.value = AuthUiState.Error("Adresse email invalide")
             password.length < 6 ->
                 _uiState.value = AuthUiState.Error("Le mot de passe doit contenir au moins 6 caractères")
+            !password.any { it.isDigit() } ->
+                _uiState.value = AuthUiState.Error("Le mot de passe doit contenir au moins un chiffre")
+            !password.any { it.isUpperCase() } ->
+                _uiState.value = AuthUiState.Error("Le mot de passe doit contenir au moins une majuscule")
+            password != confirmPassword ->
+                _uiState.value = AuthUiState.Error("Les mots de passe ne correspondent pas")
             else -> viewModelScope.launch {
                 _uiState.value = AuthUiState.Loading
                 // Stocke nom et prenom pour les utiliser dans saveUserProfile
