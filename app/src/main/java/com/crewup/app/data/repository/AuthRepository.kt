@@ -23,13 +23,13 @@ class AuthRepository {
     suspend fun registerWithEmail(
         email: String,
         password: String,
-        nom: String
+        prenom: String
     ): Result<Unit> = runCatching {
         auth.createUserWithEmailAndPassword(email.trim(), password).await()
-        // Enregistre le nom complet dans le profil Firebase Auth
-        auth.currentUser?.updateProfile(
-            UserProfileChangeRequest.Builder().setDisplayName(nom.trim()).build()
-        )?.await()
+        val user = auth.currentUser ?: error("Utilisateur non connecté")
+        user.updateProfile(
+            UserProfileChangeRequest.Builder().setDisplayName(prenom.trim()).build()
+        ).await()
     }
 
     suspend fun loginWithGoogle(idToken: String): Result<Unit> = runCatching {
@@ -44,18 +44,22 @@ class AuthRepository {
     suspend fun saveUserProfile(
         pseudo: String,
         ville: String,
-        activites: List<String>
+        activites: List<String>,
+        nom: String,
+        prenom: String
     ): Result<Unit> = runCatching {
         val user = auth.currentUser ?: error("Utilisateur non connecté")
         val data = mapOf(
             "uid"       to user.uid,
             "email"     to (user.email ?: ""),
-            "nom"       to (user.displayName ?: ""),
+            "prenom"    to prenom.ifBlank { user.displayName ?: "" },
+            "nom"       to nom,
             "pseudo"    to pseudo.trim(),
             "ville"     to ville.trim(),
             "activites" to activites,
             "createdAt" to System.currentTimeMillis()
         )
-        firestore.collection("users").document(user.uid).set(data).await()
+        // Fire-and-forget : la déconnexion suit immédiatement, l'écriture se synchronise en arrière-plan
+        firestore.collection("users").document(user.uid).set(data)
     }
 }

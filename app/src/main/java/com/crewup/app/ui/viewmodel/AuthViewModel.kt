@@ -26,6 +26,10 @@ class AuthViewModel : ViewModel() {
     private val _uiState = MutableStateFlow<AuthUiState>(AuthUiState.Idle)
     val uiState: StateFlow<AuthUiState> = _uiState
 
+    // Conservés entre RegisterScreen et SetupProfileScreen
+    private var pendingNom   = ""
+    private var pendingPrenom = ""
+
     fun isAlreadyLoggedIn() = repository.getCurrentUser() != null
 
     fun resetState() { _uiState.value = AuthUiState.Idle }
@@ -44,9 +48,15 @@ class AuthViewModel : ViewModel() {
         }
     }
 
-    fun registerWithEmail(email: String, password: String, confirmPassword: String, nom: String) {
+    fun registerWithEmail(
+        email: String,
+        password: String,
+        confirmPassword: String,
+        nom: String,
+        prenom: String
+    ) {
         when {
-            email.isBlank() || password.isBlank() || nom.isBlank() ->
+            prenom.isBlank() || nom.isBlank() || email.isBlank() || password.isBlank() ->
                 _uiState.value = AuthUiState.Error("Veuillez remplir tous les champs")
             password != confirmPassword ->
                 _uiState.value = AuthUiState.Error("Les mots de passe ne correspondent pas")
@@ -54,7 +64,10 @@ class AuthViewModel : ViewModel() {
                 _uiState.value = AuthUiState.Error("Le mot de passe doit contenir au moins 6 caractères")
             else -> viewModelScope.launch {
                 _uiState.value = AuthUiState.Loading
-                repository.registerWithEmail(email, password, nom)
+                // Stocke nom et prenom pour les utiliser dans saveUserProfile
+                pendingNom    = nom.trim()
+                pendingPrenom = prenom.trim()
+                repository.registerWithEmail(email, password, prenom)
                     .onSuccess { _uiState.value = AuthUiState.Success }
                     .onFailure { _uiState.value = AuthUiState.Error(firebaseErrorMessage(it)) }
             }
@@ -84,15 +97,18 @@ class AuthViewModel : ViewModel() {
     }
 
     fun saveUserProfile(pseudo: String, ville: String, activites: List<String>) {
-        if (pseudo.isBlank()) {
-            _uiState.value = AuthUiState.Error("Le pseudo est obligatoire")
-            return
-        }
-        viewModelScope.launch {
-            _uiState.value = AuthUiState.Loading
-            repository.saveUserProfile(pseudo, ville, activites)
-                .onSuccess { _uiState.value = AuthUiState.Success }
-                .onFailure { _uiState.value = AuthUiState.Error(firebaseErrorMessage(it)) }
+        when {
+            pseudo.isBlank() -> _uiState.value = AuthUiState.Error("Le pseudo est obligatoire")
+            ville.isBlank()  -> _uiState.value = AuthUiState.Error("La ville est obligatoire")
+            else -> viewModelScope.launch {
+                _uiState.value = AuthUiState.Loading
+                repository.saveUserProfile(pseudo, ville, activites, pendingNom, pendingPrenom)
+                    .onSuccess {
+                        repository.signOut()
+                        _uiState.value = AuthUiState.Success
+                    }
+                    .onFailure { _uiState.value = AuthUiState.Error(firebaseErrorMessage(it)) }
+            }
         }
     }
 
