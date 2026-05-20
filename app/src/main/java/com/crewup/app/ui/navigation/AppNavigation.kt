@@ -17,7 +17,8 @@ sealed class Screen(val route: String) {
     object Login         : Screen("login")
     object Register      : Screen("register")
     object SetupProfile  : Screen("setup_profile")
-    object ForgotPassword: Screen("forgot_password")
+    object ForgotPassword  : Screen("forgot_password")
+    object AccountCreated  : Screen("account_created")
     object Home          : Screen("home")
     object Explorer      : Screen("explorer")
     object Notifications : Screen("notifications")
@@ -51,7 +52,8 @@ fun AppNavigation(navController: NavHostController = rememberNavController()) {
         composable(Screen.Login.route)         { LoginScreen(navController, authViewModel) }
         composable(Screen.Register.route)      { RegisterScreen(navController, authViewModel) }
         composable(Screen.SetupProfile.route)  { SetupProfileScreen(navController, authViewModel) }
-        composable(Screen.ForgotPassword.route){ ForgotPasswordScreen(navController, authViewModel) }
+        composable(Screen.ForgotPassword.route)  { ForgotPasswordScreen(navController, authViewModel) }
+        composable(Screen.AccountCreated.route)  { AccountCreatedScreen(navController) }
 
         // Flux principal (avec bottom nav)
         composable(Screen.Home.route)          { HomeScreen(navController) }

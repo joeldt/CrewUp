@@ -42,7 +42,7 @@ fun SetupProfileScreen(
 
     LaunchedEffect(uiState) {
         if (uiState is AuthUiState.Success) {
-            navController.navigate(Screen.Home.route) {
+            navController.navigate(Screen.AccountCreated.route) {
                 popUpTo(0) { inclusive = true }
             }
             viewModel.resetState()
@@ -124,7 +124,7 @@ fun SetupProfileScreen(
 
         OutlinedTextField(
             value         = ville,
-            onValueChange = { ville = it },
+            onValueChange = { ville = it; if (errorMsg != null) viewModel.resetState() },
             placeholder   = { Text("Ville...") },
             modifier      = Modifier.fillMaxWidth(),
             shape         = RoundedCornerShape(12.dp),
@@ -184,7 +184,7 @@ fun SetupProfileScreen(
 
         Button(
             onClick  = { viewModel.saveUserProfile(pseudo, ville, selected.toList()) },
-            enabled  = !isLoading,
+            enabled  = !isLoading && pseudo.isNotBlank() && ville.isNotBlank(),
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp),
