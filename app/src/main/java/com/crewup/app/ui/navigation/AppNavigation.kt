@@ -9,6 +9,7 @@ import androidx.navigation.compose.rememberNavController
 import com.crewup.app.ui.screens.auth.*
 import com.crewup.app.ui.screens.home.*
 import com.crewup.app.ui.viewmodel.AuthViewModel
+import com.crewup.app.ui.viewmodel.ProfileViewModel
 sealed class Screen(val route: String) {
     object Welcome       : Screen("welcome")
     object Accueil       : Screen("accueil")
@@ -25,6 +26,7 @@ sealed class Screen(val route: String) {
     object CreateStep3   : Screen("create_step3")
     object Confirmation  : Screen("confirmation")
     object Profile       : Screen("profile")
+    object EditProfile   : Screen("edit_profile")
     object Historique    : Screen("historique")
     object Hub           : Screen("hub/{eventId}") {
         fun createRoute(id: String) = "hub/$id"
@@ -36,7 +38,8 @@ sealed class Screen(val route: String) {
 
 @Composable
 fun AppNavigation(navController: NavHostController = rememberNavController()) {
-    val authViewModel: AuthViewModel = viewModel()
+    val authViewModel: AuthViewModel    = viewModel()
+    val profileViewModel: ProfileViewModel = viewModel()
     val startDestination = Screen.Welcome.route
 
     NavHost(
@@ -57,7 +60,8 @@ fun AppNavigation(navController: NavHostController = rememberNavController()) {
         composable(Screen.Explorer.route)      { ExplorerScreen(navController) }
         composable(Screen.Notifications.route) { NotificationsScreen(navController) }
         composable(Screen.Historique.route)    { HistoriqueScreen(navController) }
-        composable(Screen.Profile.route)       { ProfileScreen(navController) }
+        composable(Screen.Profile.route)       { ProfileScreen(navController, profileViewModel) }
+        composable(Screen.EditProfile.route)   { EditProfileScreen(navController, profileViewModel) }
         composable(Screen.CreateStep1.route)   { CreateScreen(navController) }
     }
 }
