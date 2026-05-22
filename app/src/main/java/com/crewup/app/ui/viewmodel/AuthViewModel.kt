@@ -1,6 +1,11 @@
 package com.crewup.app.ui.viewmodel
 
-import androidx.lifecycle.ViewModel
+import android.app.Application
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.net.Uri
+import android.util.Base64
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.crewup.app.data.repository.AuthRepository
 import com.google.firebase.FirebaseNetworkException
@@ -8,18 +13,22 @@ import com.google.firebase.auth.FirebaseAuthInvalidCredentialsException
 import com.google.firebase.auth.FirebaseAuthInvalidUserException
 import com.google.firebase.auth.FirebaseAuthUserCollisionException
 import com.google.firebase.auth.FirebaseAuthWeakPasswordException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.ByteArrayOutputStream
 
 sealed class AuthUiState {
-    object Idle    : AuthUiState()
-    object Loading : AuthUiState()
-    object Success : AuthUiState()
+    object Idle               : AuthUiState()
+    object Loading            : AuthUiState()
+    object Success            : AuthUiState()
+    object SuccessNeedsProfile : AuthUiState()
     data class Error(val message: String) : AuthUiState()
 }
 
-class AuthViewModel : ViewModel() {
+class AuthViewModel(application: Application) : AndroidViewModel(application) {
 
     private val repository = AuthRepository()
 
@@ -32,6 +41,8 @@ class AuthViewModel : ViewModel() {
 
     fun isAlreadyLoggedIn() = repository.getCurrentUser() != null
 
+    suspend fun checkProfileExists(uid: String) = repository.checkProfileExists(uid)
+
     fun resetState() { _uiState.value = AuthUiState.Idle }
     fun setError(message: String) { _uiState.value = AuthUiState.Error(message) }
 
@@ -43,7 +54,7 @@ class AuthViewModel : ViewModel() {
         viewModelScope.launch {
             _uiState.value = AuthUiState.Loading
             repository.loginWithEmail(email, password)
-                .onSuccess { _uiState.value = AuthUiState.Success }
+                .onSuccess { setSuccessStateAfterLogin() }
                 .onFailure { _uiState.value = AuthUiState.Error(firebaseErrorMessage(it)) }
         }
     }
@@ -84,9 +95,15 @@ class AuthViewModel : ViewModel() {
         viewModelScope.launch {
             _uiState.value = AuthUiState.Loading
             repository.loginWithGoogle(idToken)
-                .onSuccess { _uiState.value = AuthUiState.Success }
+                .onSuccess { setSuccessStateAfterLogin() }
                 .onFailure { _uiState.value = AuthUiState.Error(firebaseErrorMessage(it)) }
         }
+    }
+
+    private suspend fun setSuccessStateAfterLogin() {
+        val uid = repository.getCurrentUser()?.uid
+        val hasProfile = if (uid != null) repository.checkProfileExists(uid) else false
+        _uiState.value = if (hasProfile) AuthUiState.Success else AuthUiState.SuccessNeedsProfile
     }
 
     fun sendPasswordReset(email: String) {
@@ -102,13 +119,16 @@ class AuthViewModel : ViewModel() {
         }
     }
 
-    fun saveUserProfile(pseudo: String, ville: String, activites: List<String>) {
+    fun saveUserProfile(pseudo: String, ville: String, activites: List<String>, photoUri: Uri? = null) {
         when {
             pseudo.isBlank() -> _uiState.value = AuthUiState.Error("Le pseudo est obligatoire")
             ville.isBlank()  -> _uiState.value = AuthUiState.Error("La ville est obligatoire")
             else -> viewModelScope.launch {
                 _uiState.value = AuthUiState.Loading
-                repository.saveUserProfile(pseudo, ville, activites, pendingNom, pendingPrenom)
+                val photoBase64 = photoUri?.let { uri ->
+                    withContext(Dispatchers.IO) { compressToBase64(uri) }
+                }
+                repository.saveUserProfile(pseudo, ville, activites, pendingNom, pendingPrenom, photoBase64)
                     .onSuccess {
                         repository.signOut()
                         _uiState.value = AuthUiState.Success
@@ -116,6 +136,19 @@ class AuthViewModel : ViewModel() {
                     .onFailure { _uiState.value = AuthUiState.Error(firebaseErrorMessage(it)) }
             }
         }
+    }
+
+    private fun compressToBase64(uri: Uri): String {
+        val context = getApplication<Application>()
+        val inputStream = context.contentResolver.openInputStream(uri)
+        val original = BitmapFactory.decodeStream(inputStream)
+        inputStream?.close()
+        val scaled = Bitmap.createScaledBitmap(original, 150, 150, true)
+        original.recycle()
+        val out = ByteArrayOutputStream()
+        scaled.compress(Bitmap.CompressFormat.JPEG, 70, out)
+        scaled.recycle()
+        return Base64.encodeToString(out.toByteArray(), Base64.NO_WRAP)
     }
 
     private fun firebaseErrorMessage(e: Throwable): String = when (e) {

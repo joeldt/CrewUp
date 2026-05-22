@@ -37,6 +37,10 @@ class AuthRepository {
         auth.signInWithCredential(credential).await()
     }
 
+    suspend fun checkProfileExists(uid: String): Boolean = runCatching {
+        firestore.collection("users").document(uid).get().await().exists()
+    }.getOrDefault(false)
+
     suspend fun sendPasswordReset(email: String): Result<Unit> = runCatching {
         auth.sendPasswordResetEmail(email.trim()).await()
     }
@@ -46,10 +50,12 @@ class AuthRepository {
         ville: String,
         activites: List<String>,
         nom: String,
-        prenom: String
+        prenom: String,
+        photoBase64: String? = null
     ): Result<Unit> = runCatching {
         val user = auth.currentUser ?: error("Utilisateur non connecté")
-        val data = mapOf(
+
+        val data = mutableMapOf<String, Any>(
             "uid"       to user.uid,
             "email"     to (user.email ?: ""),
             "prenom"    to prenom.ifBlank { user.displayName ?: "" },
@@ -59,7 +65,8 @@ class AuthRepository {
             "activites" to activites,
             "createdAt" to System.currentTimeMillis()
         )
-        // Fire-and-forget : la déconnexion suit immédiatement, l'écriture se synchronise en arrière-plan
-        firestore.collection("users").document(user.uid).set(data)
+        if (photoBase64 != null) data["photoBase64"] = photoBase64
+
+        firestore.collection("users").document(user.uid).set(data).await()
     }
 }

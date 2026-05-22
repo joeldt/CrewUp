@@ -1,5 +1,12 @@
 package com.crewup.app.ui.screens.auth
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.FileProvider
+import java.io.File
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -14,6 +21,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -21,6 +29,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
+import coil.compose.AsyncImage
 import com.crewup.app.ui.navigation.Screen
 import com.crewup.app.ui.theme.*
 import com.crewup.app.ui.viewmodel.AuthUiState
@@ -31,10 +40,22 @@ fun SetupProfileScreen(
     navController: NavHostController,
     viewModel: AuthViewModel = viewModel()
 ) {
-    var pseudo   by remember { mutableStateOf("") }
-    var ville    by remember { mutableStateOf("") }
-    val activites = listOf("⚽", "🍕", "🎬", "🎸", "🏞️", "🎮", "🏊", "🎭")
-    val selected  = remember { mutableStateListOf<String>() }
+    val context   = LocalContext.current
+    var pseudo    by remember { mutableStateOf("") }
+    var ville     by remember { mutableStateOf("") }
+    var photoUri  by remember { mutableStateOf<Uri?>(null) }
+    var showPhotoDialog  by remember { mutableStateOf(false) }
+    var cameraImageUri   by remember { mutableStateOf<Uri?>(null) }
+    val activites  = listOf("⚽", "🍕", "🎬", "🎸", "🏞️", "🎮", "🏊", "🎭")
+    val selected   = remember { mutableStateListOf<String>() }
+
+    val photoPicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia()
+    ) { uri -> if (uri != null) photoUri = uri }
+
+    val cameraLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicture()
+    ) { success -> if (success) photoUri = cameraImageUri }
 
     val uiState  by viewModel.uiState.collectAsStateWithLifecycle()
     val isLoading = uiState is AuthUiState.Loading
@@ -47,6 +68,44 @@ fun SetupProfileScreen(
             }
             viewModel.resetState()
         }
+    }
+
+    if (showPhotoDialog) {
+        AlertDialog(
+            onDismissRequest = { showPhotoDialog = false },
+            title = { Text("Photo de profil", fontWeight = FontWeight.Bold) },
+            text = {
+                Column {
+                    TextButton(
+                        onClick = {
+                            showPhotoDialog = false
+                            photoPicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Choisir depuis la galerie", color = CrewUpBlack)
+                    }
+                    TextButton(
+                        onClick = {
+                            showPhotoDialog = false
+                            val file = File.createTempFile("profile_", ".jpg", context.cacheDir)
+                            val uri  = FileProvider.getUriForFile(context, "${context.packageName}.provider", file)
+                            cameraImageUri = uri
+                            cameraLauncher.launch(uri)
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Prendre une photo", color = CrewUpBlack)
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { showPhotoDialog = false }) {
+                    Text("Annuler", color = CrewUpGrayMid)
+                }
+            }
+        )
     }
 
     Column(
@@ -94,10 +153,19 @@ fun SetupProfileScreen(
                 .clip(CircleShape)
                 .background(CrewUpGray)
                 .border(2.dp, CrewUpDivider, CircleShape)
-                .clickable(enabled = !isLoading) { },
+                .clickable(enabled = !isLoading) { showPhotoDialog = true },
             contentAlignment = Alignment.Center
         ) {
-            Text(text = "+", fontSize = 32.sp, color = CrewUpGrayMid)
+            if (photoUri != null) {
+                AsyncImage(
+                    model              = photoUri,
+                    contentDescription = "Photo de profil",
+                    modifier           = Modifier.fillMaxSize(),
+                    contentScale       = ContentScale.Crop
+                )
+            } else {
+                Text(text = "+", fontSize = 32.sp, color = CrewUpGrayMid)
+            }
         }
 
         Spacer(modifier = Modifier.height(8.dp))
@@ -183,7 +251,7 @@ fun SetupProfileScreen(
         Spacer(modifier = Modifier.weight(1f))
 
         Button(
-            onClick  = { viewModel.saveUserProfile(pseudo, ville, selected.toList()) },
+            onClick  = { viewModel.saveUserProfile(pseudo, ville, selected.toList(), photoUri) },
             enabled  = !isLoading && pseudo.isNotBlank() && ville.isNotBlank(),
             modifier = Modifier
                 .fillMaxWidth()

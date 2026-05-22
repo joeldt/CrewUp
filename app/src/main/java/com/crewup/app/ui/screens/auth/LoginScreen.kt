@@ -63,11 +63,16 @@ fun LoginScreen(
     val errorMsg  = (uiState as? AuthUiState.Error)?.message
 
     LaunchedEffect(uiState) {
-        if (uiState is AuthUiState.Success) {
-            navController.navigate(Screen.Home.route) {
-                popUpTo(0) { inclusive = true }
+        when (uiState) {
+            is AuthUiState.Success -> {
+                navController.navigate(Screen.Home.route) { popUpTo(0) { inclusive = true } }
+                viewModel.resetState()
             }
-            viewModel.resetState()
+            is AuthUiState.SuccessNeedsProfile -> {
+                navController.navigate(Screen.SetupProfile.route) { popUpTo(0) { inclusive = true } }
+                viewModel.resetState()
+            }
+            else -> {}
         }
     }
 

@@ -14,19 +14,31 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import com.crewup.app.R
 import com.crewup.app.ui.navigation.Screen
 import com.crewup.app.ui.theme.CrewUpBlueEnd
 import com.crewup.app.ui.theme.CrewUpBlueStart
 import com.crewup.app.ui.theme.CrewUpOrangeEnd
+import com.crewup.app.ui.viewmodel.AuthViewModel
+import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.delay
 
 @Composable
-fun WelcomeScreen(navController: NavHostController) {
+fun WelcomeScreen(
+    navController: NavHostController,
+    viewModel: AuthViewModel = viewModel()
+) {
     LaunchedEffect(Unit) {
         delay(2500)
-        navController.navigate(Screen.Accueil.route) {
+        val user = FirebaseAuth.getInstance().currentUser
+        val destination = when {
+            user == null -> Screen.Accueil.route
+            viewModel.checkProfileExists(user.uid) -> Screen.Home.route
+            else -> Screen.SetupProfile.route
+        }
+        navController.navigate(destination) {
             popUpTo(Screen.Welcome.route) { inclusive = true }
         }
     }

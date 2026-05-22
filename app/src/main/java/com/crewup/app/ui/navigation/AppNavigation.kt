@@ -9,8 +9,6 @@ import androidx.navigation.compose.rememberNavController
 import com.crewup.app.ui.screens.auth.*
 import com.crewup.app.ui.screens.home.*
 import com.crewup.app.ui.viewmodel.AuthViewModel
-import com.google.firebase.auth.FirebaseAuth
-
 sealed class Screen(val route: String) {
     object Welcome       : Screen("welcome")
     object Accueil       : Screen("accueil")
@@ -39,15 +37,14 @@ sealed class Screen(val route: String) {
 @Composable
 fun AppNavigation(navController: NavHostController = rememberNavController()) {
     val authViewModel: AuthViewModel = viewModel()
-    val isLoggedIn = FirebaseAuth.getInstance().currentUser != null
-    val startDestination = if (isLoggedIn) Screen.Home.route else Screen.Welcome.route
+    val startDestination = Screen.Welcome.route
 
     NavHost(
         navController    = navController,
         startDestination = startDestination
     ) {
         // Flux auth
-        composable(Screen.Welcome.route)       { WelcomeScreen(navController) }
+        composable(Screen.Welcome.route)       { WelcomeScreen(navController, authViewModel) }
         composable(Screen.Accueil.route)       { AccueilScreen(navController) }
         composable(Screen.Login.route)         { LoginScreen(navController, authViewModel) }
         composable(Screen.Register.route)      { RegisterScreen(navController, authViewModel) }
