@@ -182,7 +182,9 @@ fun ProfileScreen(
                         navController.navigate(Screen.EditProfile.route)
                     }
                     ProfileActionButton("Mes Amis") {}
-                    ProfileActionButton("Paramètres") {}
+                    ProfileActionButton("Paramètres") {
+                        navController.navigate(Screen.Parametres.route)
+                    }
 
                     Spacer(modifier = Modifier.height(8.dp))
 

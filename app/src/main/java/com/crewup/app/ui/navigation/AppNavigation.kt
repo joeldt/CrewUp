@@ -27,6 +27,7 @@ sealed class Screen(val route: String) {
     object Confirmation  : Screen("confirmation")
     object Profile       : Screen("profile")
     object EditProfile   : Screen("edit_profile")
+    object Parametres    : Screen("parametres")
     object Historique    : Screen("historique")
     object Hub           : Screen("hub/{eventId}") {
         fun createRoute(id: String) = "hub/$id"
@@ -62,6 +63,7 @@ fun AppNavigation(navController: NavHostController = rememberNavController()) {
         composable(Screen.Historique.route)    { HistoriqueScreen(navController) }
         composable(Screen.Profile.route)       { ProfileScreen(navController, profileViewModel) }
         composable(Screen.EditProfile.route)   { EditProfileScreen(navController, profileViewModel) }
+        composable(Screen.Parametres.route)    { ParametresScreen(navController) }
         composable(Screen.CreateStep1.route)   { CreateScreen(navController) }
     }
 }
