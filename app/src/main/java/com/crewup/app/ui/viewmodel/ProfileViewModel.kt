@@ -92,9 +92,10 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
                 withContext(Dispatchers.IO) { compressToBase64(uri) }
             }
             val updates = mutableMapOf<String, Any>(
-                "pseudo"    to pseudo.trim(),
-                "ville"     to ville.trim(),
-                "activites" to activites
+                "pseudo"      to pseudo.trim(),
+                "pseudoLower" to pseudo.trim().lowercase(),
+                "ville"       to ville.trim(),
+                "activites"   to activites
             )
             if (photoBase64 != null) updates["photoBase64"] = photoBase64
             runCatching {

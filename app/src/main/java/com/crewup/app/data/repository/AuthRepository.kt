@@ -60,8 +60,9 @@ class AuthRepository {
             "email"     to (user.email ?: ""),
             "prenom"    to prenom.ifBlank { user.displayName ?: "" },
             "nom"       to nom,
-            "pseudo"    to pseudo.trim(),
-            "ville"     to ville.trim(),
+            "pseudo"      to pseudo.trim(),
+            "pseudoLower" to pseudo.trim().lowercase(),
+            "ville"       to ville.trim(),
             "activites" to activites,
             "createdAt" to System.currentTimeMillis()
         )

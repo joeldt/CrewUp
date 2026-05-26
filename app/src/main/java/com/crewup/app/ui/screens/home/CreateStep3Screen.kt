@@ -25,14 +25,19 @@ import com.crewup.app.ui.navigation.Screen
 import com.crewup.app.ui.theme.*
 import com.crewup.app.ui.viewmodel.CreateEventUiState
 import com.crewup.app.ui.viewmodel.CreateEventViewModel
+import com.crewup.app.ui.viewmodel.FriendsViewModel
 
 @Composable
 fun CreateStep3Screen(
     navController: NavHostController,
-    viewModel: CreateEventViewModel
+    viewModel: CreateEventViewModel,
+    friendsViewModel: FriendsViewModel
 ) {
     val draft       by viewModel.draft.collectAsStateWithLifecycle()
     val createState by viewModel.createState.collectAsStateWithLifecycle()
+    val friends     by friendsViewModel.friends.collectAsStateWithLifecycle()
+
+    LaunchedEffect(Unit) { friendsViewModel.loadFriends() }
 
     val clipboard         = LocalClipboard.current
     val coroutineScope    = rememberCoroutineScope()
@@ -128,31 +133,56 @@ fun CreateStep3Screen(
                     color    = CrewUpDivider
                 )
 
-                // État vide — la liste d'amis sera implémentée plus tard
-                Box(
-                    modifier         = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 24.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(
-                            imageVector        = Icons.Filled.AccountCircle,
-                            contentDescription = null,
-                            tint               = CrewUpGrayMid,
-                            modifier           = Modifier.size(48.dp)
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text     = "Aucun ami pour l'instant",
-                            fontSize = 14.sp,
-                            color    = CrewUpGrayMid
-                        )
-                        Text(
-                            text     = "La liste de contacts est vide pour le moment",
-                            fontSize = 12.sp,
-                            color    = CrewUpGrayMid
-                        )
+                if (friends.isEmpty()) {
+                    Box(
+                        modifier         = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 24.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(
+                                imageVector        = Icons.Filled.AccountCircle,
+                                contentDescription = null,
+                                tint               = CrewUpGrayMid,
+                                modifier           = Modifier.size(48.dp)
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text("Aucun ami pour l'instant", fontSize = 14.sp, color = CrewUpGrayMid)
+                            Text("Ajoute des amis depuis ton profil", fontSize = 12.sp, color = CrewUpGrayMid)
+                        }
+                    }
+                } else {
+                    friends.forEach { friend ->
+                        val isChecked = friend.uid in draft.invitedFriends
+                        Row(
+                            modifier          = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            MiniAvatar(
+                                pseudo      = friend.pseudo,
+                                photoBase64 = friend.photoBase64,
+                                size        = 38
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text(
+                                text       = friend.pseudo,
+                                fontSize   = 15.sp,
+                                color      = CrewUpBlack,
+                                modifier   = Modifier.weight(1f)
+                            )
+                            Checkbox(
+                                checked         = isChecked,
+                                onCheckedChange = { viewModel.toggleFriend(friend.uid) },
+                                colors          = CheckboxDefaults.colors(
+                                    checkedColor   = CrewUpBlack,
+                                    uncheckedColor = CrewUpGrayMid
+                                )
+                            )
+                        }
+                        HorizontalDivider(color = CrewUpDivider)
                     }
                 }
 

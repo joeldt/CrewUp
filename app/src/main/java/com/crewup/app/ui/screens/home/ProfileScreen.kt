@@ -29,15 +29,20 @@ import coil.compose.AsyncImage
 import com.crewup.app.ui.components.BottomNavBar
 import com.crewup.app.ui.navigation.Screen
 import com.crewup.app.ui.theme.*
+import com.crewup.app.ui.viewmodel.FriendsViewModel
 import com.crewup.app.ui.viewmodel.ProfileUiState
 import com.crewup.app.ui.viewmodel.ProfileViewModel
 
 @Composable
 fun ProfileScreen(
     navController: NavHostController,
-    viewModel: ProfileViewModel = viewModel()
+    viewModel: ProfileViewModel = viewModel(),
+    friendsViewModel: FriendsViewModel
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val friends by friendsViewModel.friends.collectAsStateWithLifecycle()
+
+    LaunchedEffect(Unit) { friendsViewModel.loadFriends() }
 
     LaunchedEffect(Unit) { viewModel.loadProfile() }
 
@@ -171,7 +176,7 @@ fun ProfileScreen(
                                 VerticalDivider(modifier = Modifier.height(36.dp), color = CrewUpDivider)
                                 StatItem(value = "0", label = "Rejoints")
                                 VerticalDivider(modifier = Modifier.height(36.dp), color = CrewUpDivider)
-                                StatItem(value = "0", label = "Amis")
+                                StatItem(value = friends.size.toString(), label = "Amis")
                             }
                         }
                     }
@@ -181,7 +186,9 @@ fun ProfileScreen(
                     ProfileActionButton("Modifier le profil") {
                         navController.navigate(Screen.EditProfile.route)
                     }
-                    ProfileActionButton("Mes Amis") {}
+                    ProfileActionButton("Mes Amis") {
+                        navController.navigate(Screen.Friends.route)
+                    }
                     ProfileActionButton("Paramètres") {
                         navController.navigate(Screen.Parametres.route)
                     }

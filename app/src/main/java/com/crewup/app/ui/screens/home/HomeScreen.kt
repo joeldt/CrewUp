@@ -8,6 +8,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material3.*
@@ -26,6 +27,7 @@ import com.crewup.app.ui.components.BottomNavBar
 import com.crewup.app.ui.navigation.Screen
 import com.crewup.app.ui.theme.*
 import com.crewup.app.ui.viewmodel.EventSummary
+import com.crewup.app.ui.viewmodel.FriendsViewModel
 import com.crewup.app.ui.viewmodel.HomeUiState
 import com.crewup.app.ui.viewmodel.HomeViewModel
 import com.google.firebase.auth.FirebaseAuth
@@ -33,15 +35,20 @@ import com.google.firebase.auth.FirebaseAuth
 @Composable
 fun HomeScreen(
     navController: NavHostController,
-    viewModel: HomeViewModel
+    viewModel: HomeViewModel,
+    friendsViewModel: FriendsViewModel
 ) {
     var selectedTab by remember { mutableIntStateOf(0) }
     val prenom = remember {
         FirebaseAuth.getInstance().currentUser?.displayName?.ifBlank { null } ?: "toi"
     }
-    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val uiState         by viewModel.uiState.collectAsStateWithLifecycle()
+    val pendingReceived by friendsViewModel.pendingReceived.collectAsStateWithLifecycle()
 
-    LaunchedEffect(Unit) { viewModel.loadEvents() }
+    LaunchedEffect(Unit) {
+        viewModel.loadEvents()
+        friendsViewModel.loadFriends()
+    }
 
     Scaffold(
         bottomBar      = { BottomNavBar(navController) },
@@ -54,6 +61,7 @@ fun HomeScreen(
         ) {
             HomeHeader(
                 selectedTab          = selectedTab,
+                notificationCount    = pendingReceived.size,
                 onTabSelected        = { selectedTab = it },
                 onNotificationsClick = { navController.navigate(Screen.Notifications.route) }
             )
@@ -81,6 +89,7 @@ fun HomeScreen(
 @Composable
 private fun HomeHeader(
     selectedTab: Int,
+    notificationCount: Int,
     onTabSelected: (Int) -> Unit,
     onNotificationsClick: () -> Unit
 ) {
@@ -113,12 +122,26 @@ private fun HomeHeader(
             }
 
             IconButton(onClick = onNotificationsClick) {
-                Icon(
-                    imageVector        = Icons.Outlined.Notifications,
-                    contentDescription = "Notifications",
-                    tint               = CrewUpBlack,
-                    modifier           = Modifier.size(26.dp)
-                )
+                BadgedBox(
+                    badge = {
+                        if (notificationCount > 0) {
+                            Badge(containerColor = Color.Red) {
+                                Text(
+                                    text  = if (notificationCount > 9) "9+" else notificationCount.toString(),
+                                    color = Color.White
+                                )
+                            }
+                        }
+                    }
+                ) {
+                    Icon(
+                        imageVector        = if (notificationCount > 0) Icons.Filled.Notifications
+                                             else Icons.Outlined.Notifications,
+                        contentDescription = "Notifications",
+                        tint               = CrewUpBlack,
+                        modifier           = Modifier.size(26.dp)
+                    )
+                }
             }
         }
     }
