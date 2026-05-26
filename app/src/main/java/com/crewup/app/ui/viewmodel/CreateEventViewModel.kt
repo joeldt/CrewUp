@@ -75,6 +75,23 @@ class CreateEventViewModel : ViewModel() {
             _draft.update { it.copy(dates = current + millis) }
         }
     }
+
+    fun replaceDate(index: Int, millis: Long) {
+        _draft.update { draft ->
+            val dates = draft.dates.toMutableList()
+            if (index < dates.size) dates[index] = millis else dates.add(millis)
+            draft.copy(dates = dates)
+        }
+    }
+
+    fun clearDate(index: Int) {
+        _draft.update { draft ->
+            val dates = draft.dates.toMutableList()
+            if (index < dates.size) dates.removeAt(index)
+            draft.copy(dates = dates)
+        }
+    }
+
     fun removeDate(millis: Long) { _draft.update { it.copy(dates = it.dates - millis) } }
 
     // Étape 2 — adresse via Nominatim

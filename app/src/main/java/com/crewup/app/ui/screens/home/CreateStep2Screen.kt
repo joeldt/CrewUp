@@ -2,9 +2,11 @@ package com.crewup.app.ui.screens.home
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -17,16 +19,16 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
-import androidx.compose.ui.window.PopupProperties
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -37,11 +39,9 @@ import com.crewup.app.ui.theme.*
 import com.crewup.app.ui.viewmodel.CreateEventViewModel
 import com.crewup.app.ui.viewmodel.NominatimResult
 import org.osmdroid.config.Configuration
-import org.osmdroid.events.MapEventsReceiver
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
-import org.osmdroid.views.overlay.MapEventsOverlay
 import org.osmdroid.views.overlay.Marker
 import java.text.SimpleDateFormat
 import java.util.*
@@ -56,30 +56,41 @@ fun CreateStep2Screen(
     val nominatimResults by viewModel.nominatimResults.collectAsStateWithLifecycle()
     val isSearching      by viewModel.isSearching.collectAsStateWithLifecycle()
 
-    var showDatePicker  by remember { mutableStateOf(false) }
+    var dateSlotCount    by remember { mutableStateOf(minOf(3, maxOf(1, draft.dates.size))) }
+    var editingSlotIndex by remember { mutableStateOf<Int?>(null) }
+    val datePickerState  = rememberDatePickerState(initialSelectedDateMillis = System.currentTimeMillis())
+
     var addressQuery    by remember { mutableStateOf(draft.address) }
     var showSuggestions by remember { mutableStateOf(false) }
 
     val dateFormatter = remember { SimpleDateFormat("EEE d MMM yyyy", Locale.FRENCH) }
 
+    val canProceed = draft.dates.isNotEmpty()
+            && draft.address.isNotBlank()
+            && draft.maxParticipants.isNotBlank()
+
+    //champ adresse si tap sur carte déclenche géocodage inversé
+    LaunchedEffect(draft.address) {
+        if (draft.address.isNotBlank() && addressQuery != draft.address) {
+            addressQuery = draft.address
+        }
+    }
+
     LaunchedEffect(nominatimResults) { showSuggestions = nominatimResults.isNotEmpty() }
 
-    // DatePickerState
-    val datePickerState = rememberDatePickerState(
-        initialSelectedDateMillis = System.currentTimeMillis()
-    )
-
-    if (showDatePicker) {
+    if (editingSlotIndex != null) {
         DatePickerDialog(
-            onDismissRequest = { showDatePicker = false },
-            confirmButton    = {
+            onDismissRequest = { editingSlotIndex = null },
+            confirmButton = {
                 TextButton(onClick = {
-                    showDatePicker = false
-                    datePickerState.selectedDateMillis?.let { viewModel.addDate(it) }
+                    val idx    = editingSlotIndex ?: return@TextButton
+                    val millis = datePickerState.selectedDateMillis ?: return@TextButton
+                    viewModel.replaceDate(idx, millis)
+                    editingSlotIndex = null
                 }) { Text("OK", color = CrewUpBlack, fontWeight = FontWeight.Bold) }
             },
             dismissButton = {
-                TextButton(onClick = { showDatePicker = false }) {
+                TextButton(onClick = { editingSlotIndex = null }) {
                     Text("Annuler", color = CrewUpGrayMid)
                 }
             }
@@ -91,15 +102,13 @@ fun CreateStep2Screen(
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
     ) {
-        // Header
         Row(
             modifier          = Modifier
                 .statusBarsPadding()
                 .fillMaxWidth()
-                .padding(horizontal = 8.dp, vertical = 8.dp),
+                .padding(horizontal = 20.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Spacer(modifier = Modifier.width(8.dp))
             Text(
                 text       = "Date & lieu",
                 fontSize   = 22.sp,
@@ -110,11 +119,11 @@ fun CreateStep2Screen(
 
         CreationStepBar(currentStep = 2)
 
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
         Column(modifier = Modifier.padding(horizontal = 20.dp)) {
 
-            // === Dates ===
+            // Dates
             Text(
                 text       = "Dates proposées",
                 fontSize   = 15.sp,
@@ -123,74 +132,30 @@ fun CreateStep2Screen(
             )
             Spacer(modifier = Modifier.height(10.dp))
 
-            // Sélecteur de date principale
-            Surface(
-                modifier        = Modifier.fillMaxWidth(),
-                shape           = RoundedCornerShape(12.dp),
-                color           = CrewUpGray,
-                shadowElevation = 0.dp,
-                onClick         = { showDatePicker = true }
-            ) {
-                Row(
-                    modifier          = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text     = if (draft.dates.isEmpty()) "Selectionner une date..."
-                                   else dateFormatter.format(Date(draft.dates.first())),
-                        fontSize = 14.sp,
-                        color    = if (draft.dates.isEmpty()) CrewUpGrayMid else CrewUpBlack,
-                        modifier = Modifier.weight(1f)
-                    )
-                    Icon(
-                        imageVector        = Icons.Filled.CalendarMonth,
-                        contentDescription = null,
-                        tint               = CrewUpGrayMid,
-                        modifier           = Modifier.size(20.dp)
-                    )
-                }
-            }
-
-            // Dates alternatives affichées
-            draft.dates.drop(1).forEach { millis ->
-                Spacer(modifier = Modifier.height(8.dp))
-                Surface(
-                    modifier  = Modifier.fillMaxWidth(),
-                    shape     = RoundedCornerShape(12.dp),
-                    color     = CrewUpGray
-                ) {
-                    Row(
-                        modifier          = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text     = dateFormatter.format(Date(millis)),
-                            fontSize = 14.sp,
-                            color    = CrewUpBlack,
-                            modifier = Modifier.weight(1f)
-                        )
-                        IconButton(
-                            onClick  = { viewModel.removeDate(millis) },
-                            modifier = Modifier.size(20.dp)
-                        ) {
-                            Icon(
-                                imageVector        = Icons.Filled.Close,
-                                contentDescription = "Supprimer",
-                                tint               = CrewUpGrayMid
-                            )
+            for (slotIndex in 0 until dateSlotCount) {
+                val savedMillis = draft.dates.getOrNull(slotIndex)
+                if (slotIndex > 0) Spacer(modifier = Modifier.height(8.dp))
+                DateSlotRow(
+                    dateText = savedMillis?.let { dateFormatter.format(Date(it)) },
+                    onTap    = { editingSlotIndex = slotIndex },
+                    onRemove = if (savedMillis != null) {
+                        {
+                            viewModel.clearDate(slotIndex)
+                            if (slotIndex == dateSlotCount - 1 && dateSlotCount > 1) {
+                                dateSlotCount--
+                            }
                         }
-                    }
-                }
+                    } else null
+                )
             }
 
-            // Bouton ajouter date alternative
-            if (draft.dates.size in 1..2) {
+            if (dateSlotCount < 3) {
                 Spacer(modifier = Modifier.height(10.dp))
                 Row(
                     modifier          = Modifier
                         .fillMaxWidth()
-                        .clickable { showDatePicker = true }
-                        .padding(vertical = 4.dp),
+                        .clickable { dateSlotCount++ }
+                        .padding(vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(
@@ -214,7 +179,7 @@ fun CreateStep2Screen(
                 color    = CrewUpDivider
             )
 
-            // === Lieu ===
+            // Lieu
             Text(
                 text       = "Lieu",
                 fontSize   = 15.sp,
@@ -223,65 +188,71 @@ fun CreateStep2Screen(
             )
             Spacer(modifier = Modifier.height(10.dp))
 
-            Box(modifier = Modifier.fillMaxWidth()) {
-                OutlinedTextField(
-                    value         = addressQuery,
-                    onValueChange = {
-                        addressQuery = it
-                        viewModel.searchAddress(it)
-                    },
-                    placeholder   = { Text("Ex: parc de la Beaujoire", color = CrewUpGrayMid) },
-                    leadingIcon   = {
-                        Icon(
-                            imageVector        = Icons.Filled.LocationOn,
-                            contentDescription = null,
-                            tint               = CrewUpRed
-                        )
-                    },
-                    trailingIcon = if (isSearching) {
-                        { CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp) }
-                    } else null,
-                    modifier   = Modifier.fillMaxWidth(),
-                    shape      = RoundedCornerShape(12.dp),
-                    singleLine = true,
-                    colors     = OutlinedTextFieldDefaults.colors(
-                        unfocusedBorderColor = CrewUpDivider,
-                        focusedBorderColor   = CrewUpBlack
+            // Champ adresse
+            OutlinedTextField(
+                value         = addressQuery,
+                onValueChange = {
+                    addressQuery = it
+                    if (it.length >= 3) viewModel.searchAddress(it)
+                    else viewModel.clearSuggestions()
+                },
+                placeholder  = { Text("Ex: parc de la Beaujoire", color = CrewUpGrayMid) },
+                leadingIcon  = {
+                    Icon(
+                        imageVector        = Icons.Filled.LocationOn,
+                        contentDescription = null,
+                        tint               = CrewUpRed
                     )
+                },
+                trailingIcon = if (isSearching) {
+                    { CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp) }
+                } else null,
+                modifier   = Modifier.fillMaxWidth(),
+                shape      = RoundedCornerShape(12.dp),
+                singleLine = true,
+                colors     = OutlinedTextFieldDefaults.colors(
+                    unfocusedBorderColor    = CrewUpDivider,
+                    focusedBorderColor      = CrewUpBlack,
+                    unfocusedContainerColor = Color.White,
+                    focusedContainerColor   = Color.White
                 )
+            )
 
-                DropdownMenu(
-                    expanded         = showSuggestions,
-                    onDismissRequest = { showSuggestions = false },
-                    properties       = PopupProperties(focusable = false),
-                    modifier         = Modifier
-                        .fillMaxWidth()
-                        .heightIn(max = 240.dp)
+            // Suggestions d'adresse en-dessous du champ
+            if (showSuggestions && nominatimResults.isNotEmpty()) {
+                Surface(
+                    modifier        = Modifier.fillMaxWidth(),
+                    shape           = RoundedCornerShape(bottomStart = 12.dp, bottomEnd = 12.dp),
+                    color           = Color.White,
+                    shadowElevation = 3.dp
                 ) {
-                    nominatimResults.forEach { result ->
-                        DropdownMenuItem(
-                            text    = { NominatimItem(result) },
-                            onClick = {
-                                addressQuery    = result.displayName
-                                showSuggestions = false
-                                viewModel.selectAddress(result)
-                            }
-                        )
-                        HorizontalDivider(color = CrewUpDivider)
+                    Column {
+                        nominatimResults.forEach { result ->
+                            NominatimRow(
+                                result  = result,
+                                onClick = {
+                                    addressQuery    = result.displayName
+                                    showSuggestions = false
+                                    viewModel.selectAddress(result)
+                                }
+                            )
+                            HorizontalDivider(color = CrewUpDivider)
+                        }
                     }
                 }
             }
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Carte osmdroid
+            // Carte OSM , taille fixe
             OsmMapView(
-                lat       = draft.lat,
-                lon       = draft.lon,
-                onMapTap  = { lat, lon -> viewModel.selectLocationOnMap(lat, lon) },
-                modifier  = Modifier
+                lat      = draft.lat,
+                lon      = draft.lon,
+                onMapTap = { lat, lon -> viewModel.selectLocationOnMap(lat, lon) },
+                modifier = Modifier
                     .fillMaxWidth()
-                    .height(220.dp)
+                    .height(180.dp)
+                    .clip(RoundedCornerShape(12.dp))
             )
 
             HorizontalDivider(
@@ -289,7 +260,7 @@ fun CreateStep2Screen(
                 color    = CrewUpDivider
             )
 
-            // === Max participants ===
+            // Max participants
             Text(
                 text       = "Max participants",
                 fontSize   = 15.sp,
@@ -306,26 +277,25 @@ fun CreateStep2Screen(
                 singleLine    = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 colors        = OutlinedTextFieldDefaults.colors(
-                    unfocusedBorderColor = CrewUpDivider,
-                    focusedBorderColor   = CrewUpBlack
+                    unfocusedBorderColor    = CrewUpDivider,
+                    focusedBorderColor      = CrewUpBlack,
+                    unfocusedContainerColor = Color.White,
+                    focusedContainerColor   = Color.White
                 )
             )
 
-            Spacer(modifier = Modifier.height(28.dp))
+            Spacer(modifier = Modifier.height(32.dp))
 
-            // Boutons navigation
             Row(
                 modifier              = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 OutlinedButton(
                     onClick  = { navController.popBackStack() },
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(52.dp),
-                    shape  = RoundedCornerShape(14.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = CrewUpBlack),
-                    border = BorderStroke(1.5.dp, CrewUpBlack)
+                    modifier = Modifier.weight(1f).height(52.dp),
+                    shape    = RoundedCornerShape(14.dp),
+                    colors   = ButtonDefaults.outlinedButtonColors(contentColor = CrewUpBlack),
+                    border   = BorderStroke(1.5.dp, CrewUpBlack)
                 ) {
                     Icon(
                         imageVector        = Icons.AutoMirrored.Filled.ArrowBack,
@@ -337,12 +307,10 @@ fun CreateStep2Screen(
                 }
                 Button(
                     onClick  = { navController.navigate(Screen.CreateStep3.route) },
-                    enabled  = draft.dates.isNotEmpty(),
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(52.dp),
-                    shape  = RoundedCornerShape(14.dp),
-                    colors = ButtonDefaults.buttonColors(
+                    enabled  = canProceed,
+                    modifier = Modifier.weight(1f).height(52.dp),
+                    shape    = RoundedCornerShape(14.dp),
+                    colors   = ButtonDefaults.buttonColors(
                         containerColor         = CrewUpGold,
                         contentColor           = CrewUpBlack,
                         disabledContainerColor = CrewUpGrayMid,
@@ -359,14 +327,66 @@ fun CreateStep2Screen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(32.dp))
         }
     }
 }
 
 @Composable
-private fun NominatimItem(result: NominatimResult) {
-    Column(modifier = Modifier.fillMaxWidth()) {
+private fun DateSlotRow(
+    dateText: String?,
+    onTap: () -> Unit,
+    onRemove: (() -> Unit)?
+) {
+    Surface(
+        modifier        = Modifier.fillMaxWidth(),
+        shape           = RoundedCornerShape(12.dp),
+        color           = Color.White,
+        shadowElevation = 1.dp,
+        onClick         = onTap
+    ) {
+        Row(
+            modifier          = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text     = dateText ?: "Sélectionner une date...",
+                fontSize = 14.sp,
+                color    = if (dateText != null) CrewUpBlack else CrewUpGrayMid,
+                modifier = Modifier.weight(1f)
+            )
+            if (onRemove != null) {
+                IconButton(
+                    onClick  = onRemove,
+                    modifier = Modifier.size(32.dp)
+                ) {
+                    Icon(
+                        imageVector        = Icons.Filled.Close,
+                        contentDescription = "Supprimer",
+                        tint               = CrewUpGrayMid,
+                        modifier           = Modifier.size(18.dp)
+                    )
+                }
+            } else {
+                Icon(
+                    imageVector        = Icons.Filled.CalendarMonth,
+                    contentDescription = null,
+                    tint               = CrewUpGrayMid,
+                    modifier           = Modifier.size(20.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun NominatimRow(result: NominatimResult, onClick: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() }
+            .padding(horizontal = 16.dp, vertical = 10.dp)
+    ) {
         Text(
             text       = result.shortName,
             fontSize   = 14.sp,
@@ -390,7 +410,7 @@ private fun OsmMapView(
     onMapTap: (Double, Double) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val context       = LocalContext.current
+    val context        = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
 
     val mapView = remember {
@@ -399,18 +419,15 @@ private fun OsmMapView(
             userAgentValue = "CrewUp/1.0"
         }
         MapView(context).apply {
+            // MATCH_PARENT pour que la vue respecte les contraintes Compose
+            layoutParams = android.view.ViewGroup.LayoutParams(
+                android.view.ViewGroup.LayoutParams.MATCH_PARENT,
+                android.view.ViewGroup.LayoutParams.MATCH_PARENT
+            )
             setTileSource(TileSourceFactory.MAPNIK)
-            setMultiTouchControls(true)
+            setMultiTouchControls(false)
             controller.setZoom(5.5)
             controller.setCenter(GeoPoint(46.2276, 2.2137))
-            val eventsOverlay = MapEventsOverlay(object : MapEventsReceiver {
-                override fun singleTapConfirmedHelper(p: GeoPoint): Boolean {
-                    onMapTap(p.latitude, p.longitude)
-                    return true
-                }
-                override fun longPressHelper(p: GeoPoint): Boolean = false
-            })
-            overlays.add(eventsOverlay)
         }
     }
 
@@ -429,21 +446,41 @@ private fun OsmMapView(
         }
     }
 
-    AndroidView(
-        factory  = { mapView },
-        modifier = modifier,
-        update   = { mv ->
-            mv.overlays.removeAll { it is Marker }
-            if (lat != null && lon != null) {
-                val marker = Marker(mv).apply {
-                    position = GeoPoint(lat, lon)
-                    setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+    //  conteneur de taille fixe, clip du rendu Android View
+    Box(modifier = modifier) {
+        AndroidView(
+            factory  = { mapView },
+            modifier = Modifier.fillMaxSize(),
+            update   = { mv ->
+                mv.overlays.removeAll { it is Marker }
+                if (lat != null && lon != null) {
+                    mv.overlays.add(
+                        Marker(mv).apply {
+                            position = GeoPoint(lat, lon)
+                            setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+                        }
+                    )
+                    mv.controller.setZoom(15.0)
+                    mv.controller.setCenter(GeoPoint(lat, lon))
                 }
-                mv.overlays.add(marker)
-                mv.controller.setZoom(15.0)
-                mv.controller.setCenter(GeoPoint(lat, lon))
+                mv.invalidate()
             }
-            mv.invalidate()
-        }
-    )
+        )
+
+        // Overlay Compose transparent : les taps sont interceptés et convertis
+
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .pointerInput(Unit) {
+                    detectTapGestures { offset ->
+                        val geoPoint = mapView.projection.fromPixels(
+                            offset.x.toInt(),
+                            offset.y.toInt()
+                        )
+                        onMapTap(geoPoint.latitude, geoPoint.longitude)
+                    }
+                }
+        )
+    }
 }

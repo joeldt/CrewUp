@@ -10,13 +10,16 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -26,20 +29,22 @@ import com.crewup.app.ui.navigation.Screen
 import com.crewup.app.ui.theme.*
 import com.crewup.app.ui.viewmodel.CreateEventViewModel
 
-private val activityColors = listOf(
-    Color(0xFF607D8B),
-    Color(0xFF8D3B2B),
-    Color(0xFF4A5D23),
-    Color(0xFF6A1B9A),
-    Color(0xFF00838F),
-    Color(0xFFC62828),
-    Color(0xFFAD1457),
-    Color(0xFF37474F)
+private data class ActivityItem(
+    val icon: ImageVector,
+    val label: String,
+    val color: Color,
+    val key: String
 )
 
-private val activityLabels = listOf(
-    "général", "culture", "nature", "art",
-    "musique", "sport", "fête", "autre"
+private val activities = listOf(
+    ActivityItem(Icons.Filled.FitnessCenter,  "Sport",      Color(0xFFC62828), "sport"),
+    ActivityItem(Icons.Filled.MusicNote,      "Musique",    Color(0xFF6A1B9A), "musique"),
+    ActivityItem(Icons.Filled.Movie,          "Cinéma",     Color(0xFF8D3B2B), "cinéma"),
+    ActivityItem(Icons.Filled.Hiking,         "Randonnée",  Color(0xFF4A5D23), "randonnée"),
+    ActivityItem(Icons.Filled.Celebration,    "Fête",       Color(0xFFAD1457), "fête"),
+    ActivityItem(Icons.Filled.Restaurant,     "Restaurant", Color(0xFF00838F), "restaurant"),
+    ActivityItem(Icons.Filled.OutdoorGrill,   "BBQ",        Color(0xFF607D8B), "bbq"),
+    ActivityItem(Icons.Filled.SportsEsports,  "Jeux",       Color(0xFF37474F), "jeux")
 )
 
 @Composable
@@ -59,7 +64,6 @@ fun CreateStep1Screen(
                 .padding(innerPadding)
                 .verticalScroll(rememberScrollState())
         ) {
-            // Header
             Row(
                 modifier          = Modifier
                     .statusBarsPadding()
@@ -98,27 +102,50 @@ fun CreateStep1Screen(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                activityColors.chunked(4).forEachIndexed { rowIndex, row ->
+                activities.chunked(4).forEachIndexed { rowIndex, row ->
                     Row(
                         modifier              = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        row.forEachIndexed { colIndex, color ->
+                        row.forEachIndexed { colIndex, activity ->
                             val index      = rowIndex * 4 + colIndex
                             val isSelected = draft.activityType == index
                             Box(
-                                modifier = Modifier
+                                modifier         = Modifier
                                     .weight(1f)
                                     .aspectRatio(1f)
                                     .clip(RoundedCornerShape(12.dp))
-                                    .background(color)
+                                    .background(activity.color)
                                     .then(
                                         if (isSelected)
                                             Modifier.border(3.dp, Color.White, RoundedCornerShape(12.dp))
                                         else Modifier
                                     )
-                                    .clickable { viewModel.setActivityType(index) }
-                            )
+                                    .clickable { viewModel.setActivityType(index) },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.Center,
+                                    modifier            = Modifier.padding(4.dp)
+                                ) {
+                                    Icon(
+                                        imageVector        = activity.icon,
+                                        contentDescription = activity.label,
+                                        tint               = Color.White,
+                                        modifier           = Modifier.size(28.dp)
+                                    )
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text(
+                                        text       = activity.label,
+                                        color      = Color.White,
+                                        fontSize   = 9.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        textAlign  = TextAlign.Center,
+                                        maxLines   = 1
+                                    )
+                                }
+                            }
                         }
                     }
                     Spacer(modifier = Modifier.height(10.dp))
@@ -140,8 +167,10 @@ fun CreateStep1Screen(
                     shape         = RoundedCornerShape(12.dp),
                     singleLine    = true,
                     colors        = OutlinedTextFieldDefaults.colors(
-                        unfocusedBorderColor = CrewUpDivider,
-                        focusedBorderColor   = CrewUpBlack
+                        unfocusedBorderColor    = CrewUpDivider,
+                        focusedBorderColor      = CrewUpBlack,
+                        unfocusedContainerColor = Color.White,
+                        focusedContainerColor   = Color.White
                     )
                 )
 
@@ -164,8 +193,10 @@ fun CreateStep1Screen(
                     shape         = RoundedCornerShape(12.dp),
                     maxLines      = 5,
                     colors        = OutlinedTextFieldDefaults.colors(
-                        unfocusedBorderColor = CrewUpDivider,
-                        focusedBorderColor   = CrewUpBlack
+                        unfocusedBorderColor    = CrewUpDivider,
+                        focusedBorderColor      = CrewUpBlack,
+                        unfocusedContainerColor = Color.White,
+                        focusedContainerColor   = Color.White
                     )
                 )
 
@@ -210,9 +241,9 @@ internal fun CreationStepBar(currentStep: Int) {
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         steps.forEachIndexed { index, label ->
-            val step       = index + 1
-            val isActive   = step == currentStep
-            val isDone     = step < currentStep
+            val step     = index + 1
+            val isActive = step == currentStep
+            val isDone   = step < currentStep
             Column(
                 modifier            = Modifier.weight(1f),
                 horizontalAlignment = Alignment.CenterHorizontally
