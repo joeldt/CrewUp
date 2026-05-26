@@ -97,7 +97,7 @@ fun CreateStep3Screen(
 
             Column(modifier = Modifier.padding(horizontal = 20.dp)) {
 
-                // === Recherche ===
+                // Recherche
                 OutlinedTextField(
                     value         = "",
                     onValueChange = {},
@@ -115,7 +115,7 @@ fun CreateStep3Screen(
 
                 Spacer(modifier = Modifier.height(20.dp))
 
-                // === Mes contacts ===
+                // Mes contacts
                 Text(
                     text       = "Mes contacts",
                     fontSize   = 14.sp,
@@ -149,7 +149,7 @@ fun CreateStep3Screen(
                             color    = CrewUpGrayMid
                         )
                         Text(
-                            text     = "La liste de contacts arrivera bientôt",
+                            text     = "La liste de contacts est vide pour le moment",
                             fontSize = 12.sp,
                             color    = CrewUpGrayMid
                         )
@@ -160,7 +160,7 @@ fun CreateStep3Screen(
 
                 Spacer(modifier = Modifier.height(20.dp))
 
-                // === Partager un lien ===
+                // Partager un lien
                 Text(
                     text       = "ou partager un lien",
                     fontSize   = 14.sp,

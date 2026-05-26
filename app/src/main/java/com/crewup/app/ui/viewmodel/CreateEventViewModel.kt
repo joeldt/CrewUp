@@ -68,7 +68,7 @@ class CreateEventViewModel : ViewModel() {
     fun setName(name: String)       { _draft.update { it.copy(name = name) } }
     fun setDescription(desc: String){ _draft.update { it.copy(description = desc) } }
 
-    // Étape 2 — dates
+    //dates via calendrier
     fun addDate(millis: Long) {
         val current = _draft.value.dates
         if (current.size < 3 && millis !in current) {
@@ -94,7 +94,7 @@ class CreateEventViewModel : ViewModel() {
 
     fun removeDate(millis: Long) { _draft.update { it.copy(dates = it.dates - millis) } }
 
-    // Étape 2 — adresse via Nominatim
+    //adresse via Nominatim
     fun searchAddress(query: String) {
         searchJob?.cancel()
         if (query.length < 3) { _nominatimResults.value = emptyList(); return }

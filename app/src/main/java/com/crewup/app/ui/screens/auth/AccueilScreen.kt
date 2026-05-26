@@ -94,7 +94,7 @@ fun AccueilScreen(navController: NavHostController) {
                     .padding(horizontal = 32.dp, vertical = 48.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // Se connecter — fond blanc, texte bleu
+                //se connecter ( fond blanc, texte bleu)
                 Box(
                     modifier         = Modifier
                         .fillMaxWidth()
@@ -116,7 +116,7 @@ fun AccueilScreen(navController: NavHostController) {
                     }
                 }
 
-                // Créer un compte — gradient orange → bleu (couleurs thème)
+                //créer un compte (couleurs thème)
                 Box(
                     modifier         = Modifier
                         .fillMaxWidth()

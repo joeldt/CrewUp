@@ -19,8 +19,8 @@ data class EventSummary(
 sealed class HomeUiState {
     object Loading : HomeUiState()
     data class Success(
-        val allEvents: List<EventSummary>,     // Mes Crews : créés + intégrés
-        val createdEvents: List<EventSummary>  // Crées : organisés par l'utilisateur
+        val allEvents: List<EventSummary>,     // mes Crews ( créés + intégrés)
+        val createdEvents: List<EventSummary>  // Crées ( organisés par l'utilisateur)
     ) : HomeUiState()
     data class Error(val message: String) : HomeUiState()
 }
@@ -65,7 +65,7 @@ class HomeViewModel : ViewModel() {
 
                 val createdEvents = organizedDocs.map(toSummary)
 
-                // Fusion sans doublons pour "Mes Crews"
+                // Fusion sans doublons pour Mes Crews
                 val allEvents = (organizedDocs + invitedDocs)
                     .distinctBy { it.id }
                     .map(toSummary)

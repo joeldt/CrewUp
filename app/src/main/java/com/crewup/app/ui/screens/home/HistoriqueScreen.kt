@@ -21,7 +21,7 @@ fun HistoriqueScreen(navController: NavHostController) {
             modifier         = Modifier.fillMaxSize().padding(innerPadding),
             contentAlignment = Alignment.Center
         ) {
-            Text("Historique — à venir", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+            Text("Historique - à venir", fontSize = 18.sp, fontWeight = FontWeight.Bold)
         }
     }
 }

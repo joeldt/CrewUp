@@ -27,7 +27,7 @@ private data class NavItem(
     val label: String
 )
 
-// Home | Explorer | [+] | Historique | Profil
+// Home - explorer - new event - historique - profil
 private val navItems = listOf(
     NavItem(Screen.Home.route,       Icons.Filled.Home,    Icons.Outlined.Home,    "Accueil"),
     NavItem(Screen.Explorer.route,   Icons.Filled.Search,  Icons.Outlined.Search,  "Explorer"),
@@ -57,7 +57,7 @@ fun BottomNavBar(navController: NavHostController) {
                 navController.navigate(Screen.Explorer.route) { launchSingleTop = true; restoreState = true }
             }
 
-            // Bouton Créer central — gradient thème
+            // Bouton Créer central
             Box(
                 modifier         = Modifier
                     .size(48.dp)
