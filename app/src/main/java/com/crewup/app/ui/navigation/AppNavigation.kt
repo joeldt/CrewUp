@@ -11,6 +11,7 @@ import com.crewup.app.ui.screens.home.*
 import com.crewup.app.ui.viewmodel.AuthViewModel
 import com.crewup.app.ui.viewmodel.CreateEventViewModel
 import com.crewup.app.ui.viewmodel.HomeViewModel
+import com.crewup.app.ui.viewmodel.HubViewModel
 import com.crewup.app.ui.viewmodel.ProfileViewModel
 sealed class Screen(val route: String) {
     object Welcome       : Screen("welcome")
@@ -78,8 +79,8 @@ fun AppNavigation(navController: NavHostController = rememberNavController()) {
             ConfirmationScreen(navController, eventId)
         }
         composable(Screen.Hub.route) { backStackEntry ->
-            val eventId = backStackEntry.arguments?.getString("eventId") ?: ""
-            HubScreen(navController, eventId)
+            val hubViewModel: HubViewModel = viewModel(backStackEntry)
+            HubScreen(navController, hubViewModel)
         }
     }
 }
