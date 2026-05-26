@@ -15,3 +15,4 @@ val CrewUpBlueEnd   = Color(0xFF42A5F5)  // bleu clair
 val CrewUpOrangeEnd = Color(0xFFFF8C00)  // orange
 val CrewUpGreen    = Color(0xFF4CAF50)
 val CrewUpRed      = Color(0xFFE53935)
+val CrewUpGold     = Color(0xFFD4A853)

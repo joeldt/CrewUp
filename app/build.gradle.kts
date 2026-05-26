@@ -74,6 +74,9 @@ dependencies {
     implementation(libs.credential.manager.play)
     implementation(libs.googleid)
 
+    // OpenStreetMap
+    implementation(libs.osmdroid)
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
