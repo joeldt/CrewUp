@@ -10,6 +10,7 @@ import com.crewup.app.ui.screens.auth.*
 import com.crewup.app.ui.screens.home.*
 import com.crewup.app.ui.viewmodel.AuthViewModel
 import com.crewup.app.ui.viewmodel.CreateEventViewModel
+import com.crewup.app.ui.viewmodel.HomeViewModel
 import com.crewup.app.ui.viewmodel.ProfileViewModel
 sealed class Screen(val route: String) {
     object Welcome       : Screen("welcome")
@@ -25,7 +26,9 @@ sealed class Screen(val route: String) {
     object CreateStep1   : Screen("create_step1")
     object CreateStep2   : Screen("create_step2")
     object CreateStep3   : Screen("create_step3")
-    object Confirmation  : Screen("confirmation")
+    object Confirmation  : Screen("confirmation/{eventId}") {
+        fun createRoute(id: String) = "confirmation/$id"
+    }
     object Profile       : Screen("profile")
     object EditProfile   : Screen("edit_profile")
     object Parametres    : Screen("parametres")
@@ -40,9 +43,10 @@ sealed class Screen(val route: String) {
 
 @Composable
 fun AppNavigation(navController: NavHostController = rememberNavController()) {
-    val authViewModel: AuthViewModel         = viewModel()
-    val profileViewModel: ProfileViewModel   = viewModel()
+    val authViewModel: AuthViewModel               = viewModel()
+    val profileViewModel: ProfileViewModel         = viewModel()
     val createEventViewModel: CreateEventViewModel = viewModel()
+    val homeViewModel: HomeViewModel               = viewModel()
     val startDestination = Screen.Welcome.route
 
     NavHost(
@@ -59,7 +63,7 @@ fun AppNavigation(navController: NavHostController = rememberNavController()) {
         composable(Screen.AccountCreated.route)  { AccountCreatedScreen(navController) }
 
         // Flux principal (avec bottom nav)
-        composable(Screen.Home.route)          { HomeScreen(navController) }
+        composable(Screen.Home.route)          { HomeScreen(navController, homeViewModel) }
         composable(Screen.Explorer.route)      { ExplorerScreen(navController) }
         composable(Screen.Notifications.route) { NotificationsScreen(navController) }
         composable(Screen.Historique.route)    { HistoriqueScreen(navController) }
@@ -69,5 +73,13 @@ fun AppNavigation(navController: NavHostController = rememberNavController()) {
         composable(Screen.CreateStep1.route)   { CreateStep1Screen(navController, createEventViewModel) }
         composable(Screen.CreateStep2.route)   { CreateStep2Screen(navController, createEventViewModel) }
         composable(Screen.CreateStep3.route)   { CreateStep3Screen(navController, createEventViewModel) }
+        composable(Screen.Confirmation.route)  { backStackEntry ->
+            val eventId = backStackEntry.arguments?.getString("eventId") ?: ""
+            ConfirmationScreen(navController, eventId)
+        }
+        composable(Screen.Hub.route) { backStackEntry ->
+            val eventId = backStackEntry.arguments?.getString("eventId") ?: ""
+            HubScreen(navController, eventId)
+        }
     }
 }

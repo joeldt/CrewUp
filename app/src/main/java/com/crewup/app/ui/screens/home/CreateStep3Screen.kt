@@ -52,7 +52,7 @@ fun CreateStep3Screen(
     LaunchedEffect(createState) {
         when (createState) {
             is CreateEventUiState.Success -> {
-                navController.navigate(Screen.Home.route) {
+                navController.navigate(Screen.Confirmation.createRoute(viewModel.eventId)) {
                     popUpTo(Screen.CreateStep1.route) { inclusive = true }
                     launchSingleTop = true
                 }
