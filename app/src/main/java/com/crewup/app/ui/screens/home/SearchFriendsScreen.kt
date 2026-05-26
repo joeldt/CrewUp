@@ -1,5 +1,8 @@
 package com.crewup.app.ui.screens.home
 
+import android.graphics.BitmapFactory
+import android.util.Base64
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -17,6 +20,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -335,6 +340,15 @@ private fun FriendRow(entry: FriendEntry) {
 
 @Composable
 internal fun MiniAvatar(pseudo: String, photoBase64: String?, size: Int = 40) {
+    val bitmap = remember(photoBase64) {
+        photoBase64?.let {
+            runCatching {
+                val bytes = Base64.decode(it, Base64.NO_WRAP)
+                BitmapFactory.decodeByteArray(bytes, 0, bytes.size)?.asImageBitmap()
+            }.getOrNull()
+        }
+    }
+
     Box(
         modifier         = Modifier
             .size(size.dp)
@@ -342,12 +356,20 @@ internal fun MiniAvatar(pseudo: String, photoBase64: String?, size: Int = 40) {
             .background(CrewUpGrayMid),
         contentAlignment = Alignment.Center
     ) {
-        // avatar : initiale si pas de photo (base64 → même logique que HubScreen)
-        Text(
-            text       = pseudo.firstOrNull()?.uppercase() ?: "?",
-            fontSize   = (size / 2.5).sp,
-            fontWeight = FontWeight.Bold,
-            color      = Color.White
-        )
+        if (bitmap != null) {
+            Image(
+                bitmap             = bitmap,
+                contentDescription = pseudo,
+                modifier           = Modifier.fillMaxSize(),
+                contentScale       = ContentScale.Crop
+            )
+        } else {
+            Text(
+                text       = pseudo.firstOrNull()?.uppercase() ?: "?",
+                fontSize   = (size / 2.5).sp,
+                fontWeight = FontWeight.Bold,
+                color      = Color.White
+            )
+        }
     }
 }

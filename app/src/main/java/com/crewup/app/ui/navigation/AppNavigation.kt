@@ -13,6 +13,7 @@ import com.crewup.app.ui.viewmodel.CreateEventViewModel
 import com.crewup.app.ui.viewmodel.FriendsViewModel
 import com.crewup.app.ui.viewmodel.HomeViewModel
 import com.crewup.app.ui.viewmodel.HubViewModel
+import com.crewup.app.ui.viewmodel.NotificationsViewModel
 import com.crewup.app.ui.viewmodel.ProfileViewModel
 sealed class Screen(val route: String) {
     object Welcome       : Screen("welcome")
@@ -46,11 +47,12 @@ sealed class Screen(val route: String) {
 
 @Composable
 fun AppNavigation(navController: NavHostController = rememberNavController()) {
-    val authViewModel: AuthViewModel               = viewModel()
-    val profileViewModel: ProfileViewModel         = viewModel()
-    val createEventViewModel: CreateEventViewModel = viewModel()
-    val homeViewModel: HomeViewModel               = viewModel()
-    val friendsViewModel: FriendsViewModel         = viewModel()
+    val authViewModel: AuthViewModel                       = viewModel()
+    val profileViewModel: ProfileViewModel                 = viewModel()
+    val createEventViewModel: CreateEventViewModel         = viewModel()
+    val homeViewModel: HomeViewModel                       = viewModel()
+    val friendsViewModel: FriendsViewModel                 = viewModel()
+    val notificationsViewModel: NotificationsViewModel     = viewModel()
     val startDestination = Screen.Welcome.route
 
     NavHost(
@@ -67,9 +69,9 @@ fun AppNavigation(navController: NavHostController = rememberNavController()) {
         composable(Screen.AccountCreated.route)  { AccountCreatedScreen(navController) }
 
         // Flux principal (avec bottom nav)
-        composable(Screen.Home.route)          { HomeScreen(navController, homeViewModel, friendsViewModel) }
+        composable(Screen.Home.route)          { HomeScreen(navController, homeViewModel, friendsViewModel, notificationsViewModel) }
         composable(Screen.Explorer.route)      { ExplorerScreen(navController) }
-        composable(Screen.Notifications.route) { NotificationsScreen(navController, friendsViewModel) }
+        composable(Screen.Notifications.route) { NotificationsScreen(navController, friendsViewModel, notificationsViewModel) }
         composable(Screen.Historique.route)    { HistoriqueScreen(navController) }
         composable(Screen.Profile.route)       { ProfileScreen(navController, profileViewModel, friendsViewModel) }
         composable(Screen.EditProfile.route)   { EditProfileScreen(navController, profileViewModel) }
